@@ -1,18 +1,19 @@
-FROM redtree941/golang-raspbian-docker  
+FROM resin/armhf-alpine:edge-20180718
 
-ENV PATH=$PATH
+RUN apk update \
+    && apk upgrade \
+    && apk add --no-cache \
+        ca-certificates \
+    && update-ca-certificates 2>/dev/null || true
 
 RUN \
-  apt-get update && apt-get upgrade -q -y && \
-  apt-get install -y --no-install-recommends git make gcc libc-dev ca-certificates wget && \
-  git clone --depth 1 https://github.com/ethereum/go-ethereum && \
-  (cd go-ethereum && make geth) && \
-  cp go-ethereum/build/bin/geth /geth && \
-  apt-get remove -y git make gcc libc-dev  && apt-get autoremove &&  apt-get clean && \
- # apt-get remove -y git make gcc libc-dev && apt autoremove -y && apt-get clean && \
-  rm -rf /go-ethereum
+  apk add --update git go make gcc musl-dev linux-headers openssl bash && \
+  git clone https://github.com/ethereum/go-ethereum                                    && \
+  (cd go-ethereum && git checkout release/1.7  && make geth)                            && \
+  cp go-ethereum/build/bin/geth /bin/geth                                              && \
+  cp go-ethereum/build/bin/geth /usr/local/bin/                                        && \
+  apk del git go make gcc musl-dev linux-headers                                       && \
+  rm -rf /go-ethereum && rm -rf /var/cache/apk/*
 
-EXPOSE 8545
-EXPOSE 30303
-
-ENTRYPOINT ["/geth"]
+EXPOSE 8545 8546 30303 30303/udp
+ENTRYPOINT ["geth"]
